@@ -22,13 +22,8 @@ DISABLE_FRONTEND=${DISABLE_FRONTEND:-false}
 DISABLE_GUARDRAILS=${DISABLE_GUARDRAILS:-false}
 DISABLE_CV_PIPELINE=${DISABLE_CV_PIPELINE:-true}
 
-MILVUS_DB_HOST="${MILVUS_DB_HOST:-127.0.0.1}"
-
-if [ -z $MILVUS_DB_PORT ]; then
-MILVUS_DB_PORT=$((19530 + RANDOM % 100))
-fi
-# Assigning to itself for sake of completion.
-MILVUS_DATA_DIR=${MILVUS_DATA_DIR}
+ORACLE_AI_DB_HOST="${ORACLE_AI_DB_HOST:-127.0.0.1}"
+ORACLE_AI_DB_PORT="${ORACLE_AI_DB_PORT:-1521}"
 
 MODE="${MODE:-release}"
 
@@ -158,51 +153,29 @@ start_demo_client() {
     done
 }
 
-check_milvus() {
+check_oracle_ai_db() {
     while true; do
         python3 << END_PYTHON
-from pymilvus import connections
+import oracledb
 import sys
+import os
 try:
-    connections.connect("default", host="$MILVUS_DB_HOST", port="$MILVUS_DB_PORT")
-except:
+    conn = oracledb.connect(
+        user=os.environ.get("ORACLE_AI_DB_USER", "admin"),
+        password=os.environ.get("ORACLE_AI_DB_PASSWORD", ""),
+        dsn="${ORACLE_AI_DB_HOST}:${ORACLE_AI_DB_PORT}/" + os.environ.get("ORACLE_AI_DB_SERVICE_NAME", "orcl"),
+    )
+    conn.close()
+except Exception:
     sys.exit(-1)
 END_PYTHON
         if [ $? -eq 0 ]; then
             break
         fi
-        echo "Waiting for milvus server to start..."
-        sleep 1
+        echo "Waiting for Oracle AI Database to become available..."
+        sleep 2
     done
-    echo "Milvus server started."
-}
-
-start_milvus() {
-    # Stop milvus if already running
-    PROCESS=$(ps -e | grep milvus | grep -v grep | awk '{print $1}')
-    if [ -n "$PROCESS" ]; then
-        echo "Stopping milvus server..."
-        kill -9 $PROCESS
-        echo "Milvus server stopped"
-    fi
-    if [ $DISABLE_CA_RAG = false ] && [ $MILVUS_DB_HOST == "127.0.0.1" ]; then
-        echo "Running milvus server"
-        # Start milvus_server
-        if [[ -z "$MILVUS_DATA_DIR" ]]; then
-            milvus-server --proxy-port $MILVUS_DB_PORT &
-        else
-            echo "Milvus data dir moved to " $MILVUS_DATA_DIR
-            milvus-server --proxy-port $MILVUS_DB_PORT --data $MILVUS_DATA_DIR &
-        fi
-        process_pid=$!
-        if [ $? -eq 0 ]; then
-            echo $process_pid >> "$PID_FILE"
-            check_milvus
-        else
-            echo "Failed to start milvus-server"
-            exit 1
-        fi
-    fi
+    echo "Oracle AI Database is available."
 }
 
 check_via_process_status() {
@@ -290,8 +263,7 @@ start_via_server() {
     if [ $DISABLE_CA_RAG = true ]; then
         EXTRA_ARGS+=" --disable-ca-rag"
     else
-        # Start via_server
-        EXTRA_ARGS+=" --milvus-db-port $MILVUS_DB_PORT --milvus-db-host $MILVUS_DB_HOST"
+        EXTRA_ARGS+=" --oracle-ai-db-host $ORACLE_AI_DB_HOST --oracle-ai-db-port $ORACLE_AI_DB_PORT"
     fi
     if [ $ENABLE_NSYS_PROFILER = true ]; then
 	    echo "Profiling with  nsys"
@@ -352,8 +324,7 @@ start_processes() {
     fi
 
     if [ $DISABLE_CA_RAG = true ]; then
-        echo "Disabling CA RAG, Also disabling milvus"
-        ENABLE_MILVUS=false
+        echo "Disabling CA RAG"
     fi
 
     if [ "$INSTALL_PROPRIETARY_CODECS" = true ]; then
@@ -367,7 +338,9 @@ start_processes() {
         configure_riva_asr_service
     fi
 
-    start_milvus
+    if [ $DISABLE_CA_RAG = false ]; then
+        check_oracle_ai_db
+    fi
 
     start_cuda_mps_server
 

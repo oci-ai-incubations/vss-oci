@@ -82,15 +82,7 @@ vss:
   applicationSpecs: 
     vss-deployment: 
       initContainers: 
-      - command: 
-        - sh 
-        - -c 
-        - until nc -z -w 2 milvus-milvus-deployment-milvus-service 19530; do echo 
-          waiting for milvus; sleep 2; done 
-        image: busybox:1.28 
-        imagePullPolicy: IfNotPresent 
-        name: check-milvus-up 
-      - command: 
+      - command:
         - sh 
         - -c 
         - until nc -z -w 2 neo-4-j-service 7687; do echo waiting for neo4j; sleep 
