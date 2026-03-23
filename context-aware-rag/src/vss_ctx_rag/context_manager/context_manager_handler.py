@@ -35,7 +35,7 @@ from vss_ctx_rag.functions.summarization import (
 )
 from vss_ctx_rag.tools.llm import ChatOpenAITool
 from vss_ctx_rag.tools.notification import AlertSSETool
-from vss_ctx_rag.tools.storage import MilvusDBTool, Neo4jGraphDB
+from vss_ctx_rag.tools.storage import OracleAIDBTool, Neo4jGraphDB
 from vss_ctx_rag.utils.globals import (
     DEFAULT_BATCH_SUMMARIZATION_BATCH_SIZE,
     DEFAULT_LLM_PARAMS,
@@ -92,7 +92,7 @@ class ContextManagerHandler:
         self.auto_indexing: Optional[bool] = None
         self.curr_doc_index: int = -1
         self.rag_type = None
-        self.milvus_db: MilvusDBTool = None
+        self.milvus_db: OracleAIDBTool = None
         self.chat_llm: ChatOpenAITool = None
         self.llm: ChatOpenAITool = None
         self.notification_llm: ChatOpenAITool = None
@@ -150,16 +150,16 @@ class ContextManagerHandler:
         logger.debug(
             f"Configuring init for {self._process_index} with config: {config}"
         )
-        # Init time Milvus DB config
+        # Init time Oracle AI Vector Search DB config
         chat_config = copy.deepcopy(config.get("chat"))
         summ_config = copy.deepcopy(config.get("summarization"))
         collection_name = "summary_till_now_" + str(time.time()).replace(".", "_")
         if req_info and req_info.uuid:
             collection_name = "summary_till_now_" + req_info.uuid
-        self.milvus_db = MilvusDBTool(
+        self.milvus_db = OracleAIDBTool(
             collection_name=collection_name,
-            host=config["milvus_db_host"],
-            port=config["milvus_db_port"],
+            host=config.get("oracle_ai_db_host"),
+            port=config.get("oracle_ai_db_port", "1521"),
             reranker_base_url=chat_config["reranker"]["base_url"],
             reranker_model_name=chat_config["reranker"]["model"],
             embedding_base_url=chat_config["embedding"]["base_url"],
