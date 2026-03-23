@@ -62,7 +62,7 @@ DEFAULT_CALLBACK_JSON_TEMPLATE = (
 )
 
 ALERT_CALLBACK_PORT = 60000
-MAX_MILVUS_STRING_LEN = 65535
+MAX_ORACLE_AI_STRING_LEN = 65535
 
 
 class AlertInfo:
@@ -559,8 +559,8 @@ class ViaStreamHandler:
                     config["api_key"] = os.getenv("NVIDIA_API_KEY")
                 else:
                     config["api_key"] = "NOAPIKEYSET"
-                config["milvus_db_host"] = args.milvus_db_host
-                config["milvus_db_port"] = args.milvus_db_port
+                config["oracle_ai_db_host"] = args.oracle_ai_db_host
+                config["oracle_ai_db_port"] = args.oracle_ai_db_port
                 self._ca_rag_config = config
                 self._ctx_mgr = True
                 os.environ["CA_RAG_ENABLE_WARMUP"] = "true"
@@ -2771,16 +2771,16 @@ class ViaStreamHandler:
         )
 
         parser.add_argument(
-            "--milvus-db-port",
+            "--oracle-ai-db-port",
             type=str,
-            default="19530",
-            help="Port to use Milvus DB on",
+            default="1521",
+            help="Port to use Oracle AI Vector Search DB on",
         )
         parser.add_argument(
-            "--milvus-db-host",
+            "--oracle-ai-db-host",
             type=str,
             default="127.0.0.1",
-            help="Host to use Milvus DB on",
+            help="Host to use Oracle AI Vector Search DB on",
         )
         parser.add_argument(
             "--disable-ca-rag",
