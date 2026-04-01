@@ -62,7 +62,7 @@ DEFAULT_CALLBACK_JSON_TEMPLATE = (
 )
 
 ALERT_CALLBACK_PORT = 60000
-MAX_MILVUS_STRING_LEN = 65535
+MAX_DB_STRING_LEN = 65535
 
 
 class AlertInfo:
@@ -559,8 +559,8 @@ class ViaStreamHandler:
                     config["api_key"] = os.getenv("NVIDIA_API_KEY")
                 else:
                     config["api_key"] = "NOAPIKEYSET"
-                config["milvus_db_host"] = args.milvus_db_host
-                config["milvus_db_port"] = args.milvus_db_port
+                config["oracle_ai_db_host"] = args.oracle_ai_db_host
+                config["oracle_ai_db_port"] = args.oracle_ai_db_port
                 self._ca_rag_config = config
                 self._ctx_mgr = True
                 os.environ["CA_RAG_ENABLE_WARMUP"] = "true"
@@ -895,11 +895,11 @@ class ViaStreamHandler:
                 # for duration chunk.start_pts to chunk.end_pts
                 cv_meta = chunk.cached_frames_cv_meta
                 cv_meta_str = json.dumps(self._remove_segmasks_from_cv_meta(cv_meta))
-                if len(cv_meta_str) > MAX_MILVUS_STRING_LEN:
-                    cv_meta_str = cv_meta_str[:MAX_MILVUS_STRING_LEN]
+                if len(cv_meta_str) > MAX_DB_STRING_LEN:
+                    cv_meta_str = cv_meta_str[:MAX_DB_STRING_LEN]
                     logger.warning(
                         "CV metadata length exceeds max milvus string length, " "truncating to %d",
-                        MAX_MILVUS_STRING_LEN,
+                        MAX_DB_STRING_LEN,
                     )
                 print(
                     f"chunkIdx = {chunk.chunkIdx}  chunk.start_pts = {chunk.start_pts} \
@@ -2771,16 +2771,16 @@ class ViaStreamHandler:
         )
 
         parser.add_argument(
-            "--milvus-db-port",
+            "--oracle-ai-db-port",
             type=str,
-            default="19530",
-            help="Port to use Milvus DB on",
+            default="1521",
+            help="Port to use Oracle AI DB on",
         )
         parser.add_argument(
-            "--milvus-db-host",
+            "--oracle-ai-db-host",
             type=str,
             default="127.0.0.1",
-            help="Host to use Milvus DB on",
+            help="Host to use Oracle AI DB on",
         )
         parser.add_argument(
             "--disable-ca-rag",

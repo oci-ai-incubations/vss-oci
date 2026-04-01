@@ -28,7 +28,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.retrievers.document_compressors import DocumentCompressorPipeline
 
 from vss_ctx_rag.base import Function
-from vss_ctx_rag.tools.storage.milvus_db import MilvusDBTool
+from vss_ctx_rag.tools.storage.oracle_ai_db import OracleAIDBTool
 from vss_ctx_rag.tools.health.rag_health import GraphMetrics
 from vss_ctx_rag.utils.ctx_rag_logger import TimeMeasure, logger
 from vss_ctx_rag.utils.globals import DEFAULT_RAG_TOP_K, LLM_TOOL_NAME
@@ -39,7 +39,7 @@ class VectorRetrievalFunc(Function):
 
     config: dict
     output_parser = StrOutputParser()
-    vector_db: MilvusDBTool
+    vector_db: OracleAIDBTool
     metrics = GraphMetrics()
 
     def setup(self):

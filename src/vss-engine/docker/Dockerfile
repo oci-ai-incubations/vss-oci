@@ -16,9 +16,8 @@ FROM $BASE_IMAGE
 RUN --mount=type=bind,source=binaries/gradio_videotimeline-1.0.2-py3-none-any.whl,target=/tmp/gradio_videotimeline-1.0.2-py3-none-any.whl \
     pip install --no-deps /tmp/gradio_videotimeline-1.0.2-py3-none-any.whl
 
-RUN git clone https://github.com/NVIDIA/context-aware-rag.git -b v0.5.1 /tmp/vss-ctx-rag
-RUN pip install /tmp/vss-ctx-rag --no-deps && \
-    rm -rf /tmp/vss-ctx-rag
+RUN --mount=type=bind,source=context-aware-rag,target=/tmp/vss-ctx-rag \
+    pip install /tmp/vss-ctx-rag --no-deps
 
 RUN mkdir -p /opt/nvidia/TritonGdino/triton_model_repo
 COPY TritonGdino/triton_model_repo/ /opt/nvidia/TritonGdino/triton_model_repo

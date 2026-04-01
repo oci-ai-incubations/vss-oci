@@ -35,7 +35,8 @@ from vss_ctx_rag.functions.summarization import (
 )
 from vss_ctx_rag.tools.llm import ChatOpenAITool
 from vss_ctx_rag.tools.notification import AlertSSETool
-from vss_ctx_rag.tools.storage import MilvusDBTool, Neo4jGraphDB
+from vss_ctx_rag.tools.storage import Neo4jGraphDB
+from vss_ctx_rag.tools.storage.oracle_ai_db import OracleAIDBTool
 from vss_ctx_rag.utils.globals import (
     DEFAULT_BATCH_SUMMARIZATION_BATCH_SIZE,
     DEFAULT_LLM_PARAMS,
@@ -92,7 +93,7 @@ class ContextManagerHandler:
         self.auto_indexing: Optional[bool] = None
         self.curr_doc_index: int = -1
         self.rag_type = None
-        self.milvus_db: MilvusDBTool = None
+        self.oracle_db: OracleAIDBTool = None
         self.chat_llm: ChatOpenAITool = None
         self.llm: ChatOpenAITool = None
         self.notification_llm: ChatOpenAITool = None
@@ -156,10 +157,13 @@ class ContextManagerHandler:
         collection_name = "summary_till_now_" + str(time.time()).replace(".", "_")
         if req_info and req_info.uuid:
             collection_name = "summary_till_now_" + req_info.uuid
-        self.milvus_db = MilvusDBTool(
+        self.oracle_db = OracleAIDBTool(
             collection_name=collection_name,
-            host=config["milvus_db_host"],
-            port=config["milvus_db_port"],
+            host=config["oracle_ai_db_host"],
+            port=config["oracle_ai_db_port"],
+            service_name=os.environ.get("ORACLE_AI_DB_SERVICE_NAME", "orcl"),
+            username=os.environ.get("ORACLE_AI_DB_USER", "admin"),
+            password=os.environ.get("ORACLE_AI_DB_PASSWORD", ""),
             reranker_base_url=chat_config["reranker"]["base_url"],
             reranker_model_name=chat_config["reranker"]["model"],
             embedding_base_url=chat_config["embedding"]["base_url"],
@@ -290,7 +294,7 @@ class ContextManagerHandler:
                     self.add_function(
                         BatchSummarization("summarization")
                         .add_tool(LLM_TOOL_NAME, self.llm)
-                        .add_tool("vector_db", self.milvus_db)
+                        .add_tool("vector_db", self.oracle_db)
                         .config(**summ_config)
                         .done()
                     )
@@ -380,7 +384,7 @@ class ContextManagerHandler:
                             .add_function(
                                 "retrieval_function",
                                 VectorRetrievalFunc("retrieval_function")
-                                .add_tool("vector_db", self.milvus_db)
+                                .add_tool("vector_db", self.oracle_db)
                                 .add_tool(LLM_TOOL_NAME, self.chat_llm)
                                 .config(**chat_config)
                                 .done(),
