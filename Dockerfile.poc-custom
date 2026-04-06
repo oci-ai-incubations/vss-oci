@@ -1,0 +1,9 @@
+FROM iad.ocir.io/iduyx1qnmway/corrino-devops-repository/vss-engine:2.4.0-custom
+
+# Fix: OCI GenAI requires max_completion_tokens instead of max_tokens
+COPY llm.py /usr/local/lib/python3.12/dist-packages/nvidia_rag/utils/llm.py
+COPY llm_handler.py /usr/local/lib/python3.12/dist-packages/vss_ctx_rag/tools/llm/llm_handler.py
+
+# Fix: OpenAI API parameter rename (max_tokens -> max_completion_tokens) in VIA engine
+RUN sed -i 's/max_tokens=generation_config\["max_new_tokens"\]/max_completion_tokens=generation_config["max_new_tokens"]/g' \
+    /opt/nvidia/via/via-engine/models/openai_compat/openai_compat_model.py
