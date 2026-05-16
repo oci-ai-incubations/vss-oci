@@ -7,3 +7,15 @@ COPY llm_handler.py /usr/local/lib/python3.12/dist-packages/vss_ctx_rag/tools/ll
 # Fix: OpenAI API parameter rename (max_tokens -> max_completion_tokens) in VIA engine
 RUN sed -i 's/max_tokens=generation_config\["max_new_tokens"\]/max_completion_tokens=generation_config["max_new_tokens"]/g' \
     /opt/nvidia/via/via-engine/models/openai_compat/openai_compat_model.py
+
+# Fix: surface real upstream errors instead of swallowing them as
+# "An unknown error occurred" / "Summarization failed. Please check
+# server logs". Essential for moderation packs where the LLM provider's
+# content policy may reject violent or explicit frames -- without the
+# real error the operator can't tell a policy block from an engine bug.
+# Source-of-truth at src/vss-engine/src/{vlm_pipeline/process_base.py,
+# via_stream_handler.py} so re-builds from src/ get the same fix.
+COPY src/vss-engine/src/vlm_pipeline/process_base.py \
+     /opt/nvidia/via/via-engine/vlm_pipeline/process_base.py
+COPY src/vss-engine/src/via_stream_handler.py \
+     /opt/nvidia/via/via-engine/via_stream_handler.py

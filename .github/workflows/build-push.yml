@@ -1,0 +1,85 @@
+name: Build and Push vss-engine (poc-custom)
+
+# Triggers
+# - workflow_dispatch: manual run, builds + pushes both mutable and
+#   SHA-immutable tags.
+# - pull_request: build-only validation on every PR push (no registry push)
+#   so a Dockerfile or overlay-file change is verified before merge.
+# - push to oracle-dev/dev: build + push on every merge.
+#
+# Image: iad.ocir.io/<tenancy>/corrino-devops-repository/vss-engine
+# Tags produced:
+#   :2.4.0-poc-custom                 (mutable head)
+#   :2.4.0-poc-custom-<SHORT_SHA>     (immutable, what TF pins to)
+#
+# The base image vss-engine:2.4.0-custom is NOT rebuilt here -- that's a
+# multi-GB CUDA build expected to live elsewhere. This workflow only
+# layers the overlays + sed patches in Dockerfile.poc-custom on top.
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches: [oracle-dev/dev, main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [oracle-dev/dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+      OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+      IMAGE_NAME: corrino-devops-repository/vss-engine
+      IMAGE_VERSION: "2.4.0-poc-custom"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # vss-engine is a CUDA-based image — clean up unneeded runner layers
+      # so the build has enough disk for the multi-GB intermediate stages.
+      - name: Free disk space on runner
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/.ghcup
+          docker image prune -af || true
+          df -h /
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Build image (poc-custom overlay)
+        run: |
+          docker build \
+            -t "${{ env.IMAGE_NAME }}:${{ env.IMAGE_VERSION }}" \
+            -f Dockerfile.poc-custom .
+
+      # Push only on workflow_dispatch and push events. PRs build-only.
+      - name: Log into OCIR
+        if: github.event_name != 'pull_request'
+        uses: oracle-actions/login-ocir@v1.3.0
+        with:
+          auth_token: ${{ secrets.OCI_AUTH_TOKEN }}
+
+      - name: Tag and push (version + version-SHA)
+        if: github.event_name != 'pull_request'
+        env:
+          IMAGE_REMOTE: "iad.ocir.io/${{ secrets.OCI_TENANCY_NAMESPACE }}/${{ env.IMAGE_NAME }}"
+        run: |
+          docker tag "${{ env.IMAGE_NAME }}:${{ env.IMAGE_VERSION }}" \
+                     "${{ env.IMAGE_REMOTE }}:${{ env.IMAGE_VERSION }}"
+          docker push "${{ env.IMAGE_REMOTE }}:${{ env.IMAGE_VERSION }}"
+          # Immutable SHA-suffixed copy so TF can pin precisely.
+          docker tag "${{ env.IMAGE_NAME }}:${{ env.IMAGE_VERSION }}" \
+                     "${{ env.IMAGE_REMOTE }}:${{ env.IMAGE_VERSION }}-${{ env.SHORT_SHA }}"
+          docker push "${{ env.IMAGE_REMOTE }}:${{ env.IMAGE_VERSION }}-${{ env.SHORT_SHA }}"
