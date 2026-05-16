@@ -138,7 +138,14 @@ class ViaProcessBase(mp_ctx.Process):
 
         if isinstance(result, BaseException):
             logger.error("".join(traceback.format_exception(result)))
-            error_str = "An unknown error occurred"
+            # Surface the underlying exception message instead of a generic
+            # placeholder. For OpenAI/HTTPX failures this exposes the
+            # upstream provider's reason (e.g. "Error code: 400 - {...
+            # 'Inappropriate content detected'}") which is essential for
+            # moderation use cases where the LLM provider rejects violent
+            # or explicit frames — otherwise the operator has no way to
+            # distinguish a content-policy block from a real engine bug.
+            error_str = str(result).strip() or type(result).__name__
             result = {
                 "chunk": kwargs["chunk"],
                 "chunk_id": kwargs["chunk_id"],

@@ -3058,14 +3058,19 @@ class ViaStreamHandler:
                                     )
 
                             if "error" in agg_response and agg_response["error"]:
+                                upstream_err = agg_response["error"]
                                 logger.error(
                                     f"Error for Request ID: {req_info.request_id}"
                                     f"Stream ID: {req_info.stream_id}"
                                 )
-                                logger.error(f"An internal error occurred: {agg_response['error']}")
+                                logger.error(f"An internal error occurred: {upstream_err}")
                                 logger.error(traceback.format_exc())
-                                agg_response = "Summarization failed. Please check server \
-                                    logs for more details.\n"
+                                # Pass the actual upstream error through to the
+                                # streamed response instead of a generic "check
+                                # server logs" message. For moderation packs
+                                # this distinguishes a real engine bug from an
+                                # LLM-provider content-policy block.
+                                agg_response = f"Summarization failed: {upstream_err}\n"
 
                             agg_response = agg_response["summarization"]["result"]
                             if self._via_health_eval is True:
