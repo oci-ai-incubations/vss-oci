@@ -1,9 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git merge:*)",
-      "Bash(xargs git:*)",
-      "Bash(git add:*)"
+      "Read(//Users/rriley/Repos/oci/**)",
+      "Bash(python3 -c \"from langchain_community.vectorstores.oraclevs import OracleVS; help\\(OracleVS.__init__\\)\")",
+      "Bash(pip show:*)",
+      "Bash(python3 -c \"import langchain_community; print\\(langchain_community.__version__\\)\")",
+      "Bash(pip3 install:*)",
+      "Bash(python3 -c \"from langchain_community.vectorstores.oraclevs import OracleVS; import inspect; print\\(inspect.signature\\(OracleVS.__init__\\)\\)\")",
+      "Bash(python3 -c ':*)",
+      "Bash(git subtree:*)",
+      "Bash(git stash:*)",
+      "Bash(gh repo:*)",
+      "Bash(git remote:*)",
+      "Bash(git merge:*)"
     ]
   }
 }
